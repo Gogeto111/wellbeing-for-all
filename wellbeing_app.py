@@ -335,71 +335,73 @@ def settings(u):
 # ======================================================
 if st.session_state.user is None:
     auth()
+
 else:
     u = st.session_state.user
-    menu = st.sidebar.radio("Menu", [
-        "Dashboard",
-        "Profile",
-        "Mental Health",
-        "Habits",
-        "Things To Do",
-        "Achievements",
-        "Community",
-        "Business",
-        "Settings",
-        "Logout"
-        "Daily Challenge",
-        "Reminders",
-        "Reports",
-        "Certificate"
 
-    ])
+    menu = st.sidebar.radio(
+        "Menu",
+        [
+            "Dashboard",
+            "Profile",
+            "Mental Health",
+            "Habits",
+            "Things To Do",
+            "Achievements",
+            "Daily Challenge",
+            "Reminders",
+            "Community",
+            "Business",
+            "Reports",
+            "Certificate",
+            "Settings",
+            "Logout"
+        ]
+    )
 
     if menu == "Dashboard":
-    dashboard(u)
+        dashboard(u)
 
-elif menu == "Profile":
-    profile(u)
+    elif menu == "Profile":
+        profile(u)
 
-elif menu == "Mental Health":
-    mental_health(u)
+    elif menu == "Mental Health":
+        mental_health(u)
 
-elif menu == "Habits":
-    habits(u)
+    elif menu == "Habits":
+        habits(u)
 
-elif menu == "Things To Do":
-    tasks(u)
+    elif menu == "Things To Do":
+        tasks(u)
 
-elif menu == "Achievements":
-    achievements(u)
+    elif menu == "Achievements":
+        achievements(u)
 
-elif menu == "Daily Challenge":
-    daily_challenge(u)
+    elif menu == "Daily Challenge":
+        daily_challenge(u)
 
-elif menu == "Reminders":
-    reminders()
+    elif menu == "Reminders":
+        reminders()
 
-elif menu == "Community":
-    community()
+    elif menu == "Community":
+        community()
 
-elif menu == "Business":
-    business()
+    elif menu == "Business":
+        business()
 
-elif menu == "Reports":
-    reports(u)
+    elif menu == "Reports":
+        reports(u)
 
-elif menu == "Certificate":
-    certificate(u)
+    elif menu == "Certificate":
+        certificate(u)
 
-elif menu == "Teacher Dashboard" and data["users"][u]["role"] == "Teacher":
-    teacher_dashboard()
+    elif menu == "Settings":
+        settings(u)
 
-elif menu == "Settings":
-    settings(u)
+    elif menu == "Logout":
+        st.session_state.user = None
+        st.rerun()
 
-elif menu == "Logout":
-    st.session_state.user = None
-    st.rerun()
 
 # ======================================================
 # DAILY CHALLENGE
@@ -529,4 +531,5 @@ def certificate(u):
         st.success("Certificate generated successfully (demo)")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
