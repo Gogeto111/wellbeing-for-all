@@ -355,25 +355,52 @@ else:
 
     ])
 
-    if menu == "Dashboard": dashboard(u)
-    elif menu == "Profile": profile(u)
-    elif menu == "Mental Health": mental_health(u)
-    elif menu == "Habits": habits(u)
-    elif menu == "Things To Do": tasks(u)
-    elif menu == "Achievements": achievements(u)
-    elif menu == "Community": community()
-    elif menu == "Business": business()
-    elif menu == "Settings": settings(u)
-    elif menu == "Logout":
-    elif menu == "Daily Challenge": daily_challenge(u)
-    elif menu == "Reminders": reminders()
-    elif menu == "Reports": reports(u)
-    elif menu == "Certificate": certificate(u)
-    elif menu == "Teacher Dashboard" and data["users"][u]["role"] == "Teacher":
+    if menu == "Dashboard":
+    dashboard(u)
+
+elif menu == "Profile":
+    profile(u)
+
+elif menu == "Mental Health":
+    mental_health(u)
+
+elif menu == "Habits":
+    habits(u)
+
+elif menu == "Things To Do":
+    tasks(u)
+
+elif menu == "Achievements":
+    achievements(u)
+
+elif menu == "Daily Challenge":
+    daily_challenge(u)
+
+elif menu == "Reminders":
+    reminders()
+
+elif menu == "Community":
+    community()
+
+elif menu == "Business":
+    business()
+
+elif menu == "Reports":
+    reports(u)
+
+elif menu == "Certificate":
+    certificate(u)
+
+elif menu == "Teacher Dashboard" and data["users"][u]["role"] == "Teacher":
     teacher_dashboard()
 
-        st.session_state.user = None
-        st.rerun()
+elif menu == "Settings":
+    settings(u)
+
+elif menu == "Logout":
+    st.session_state.user = None
+    st.rerun()
+
 # ======================================================
 # DAILY CHALLENGE
 # ======================================================
@@ -502,3 +529,4 @@ def certificate(u):
         st.success("Certificate generated successfully (demo)")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
