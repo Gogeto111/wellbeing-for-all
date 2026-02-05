@@ -1,11 +1,11 @@
 import streamlit as st
-import json, os, csv
+import json, os, random, time
 from datetime import date, datetime
-import time
-import random
 import pandas as pd
 
-# ---------------- CONFIG ----------------
+# ======================================================
+# PAGE CONFIG
+# ======================================================
 st.set_page_config(
     page_title="Well-Being for All",
     page_icon="💙",
@@ -14,274 +14,491 @@ st.set_page_config(
 
 DATA_FILE = "wellbeing_data.json"
 
-QUOTES = [
-    "Small steps every day lead to big change.",
-    "Your well-being matters.",
-    "It’s okay to ask for help.",
-    "Healthy mind, healthy body.",
-    "Be kind to yourself today."
-]
+# ======================================================
+# GLOBAL STYLES (FONTS + ANIMATIONS)
+# ======================================================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;700&display=swap');
 
-CHALLENGES = [
-    "Drink 6–8 glasses of water",
-    "Take a 10-minute walk",
-    "Write one thing you are grateful for",
-    "Stretch for 5 minutes",
-    "Talk to someone you trust"
-]
+* { font-family: 'Inter', sans-serif; }
 
-# ---------------- DATA ----------------
+.fade {
+    animation: fadeIn 0.6s ease;
+}
+@keyframes fadeIn {
+    from {opacity:0; transform:translateY(8px);}
+    to {opacity:1; transform:translateY(0);}
+}
+
+.main-title {
+    font-family:'Poppins',sans-serif;
+    font-size:44px;
+    font-weight:700;
+    background:linear-gradient(90deg,#4facfe,#00f2fe);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.card {
+    background:#f9fbff;
+    border-radius:18px;
+    padding:22px;
+    margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.06);
+    transition:0.25s;
+}
+.card:hover { transform:translateY(-4px); }
+
+.badge {
+    display:inline-block;
+    padding:6px 14px;
+    border-radius:20px;
+    background:#e6f4ff;
+    color:#0077cc;
+    font-size:12px;
+    margin-right:6px;
+}
+
+.divider {
+    height:1px;
+    background:linear-gradient(to right, transparent, #cce7ff, transparent);
+    margin:24px 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ======================================================
+# DATA HANDLING
+# ======================================================
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {
             "users": {},
-            "gratitude_wall": [],
-            "total_revenue": 0
+            "gratitude": [],
+            "revenue": 0
         }
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    return json.load(open(DATA_FILE))
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+def save_data(d):
+    json.dump(d, open(DATA_FILE, "w"), indent=4)
 
 data = load_data()
 
-# ---------------- SESSION ----------------
+# ======================================================
+# SESSION
+# ======================================================
 if "user" not in st.session_state:
     st.session_state.user = None
 
-# ---------------- AUTH ----------------
-def auth_page():
-    st.title("💙 Well-Being for All")
-    st.caption("Student Wellness & Social Enterprise App")
+# ======================================================
+# HELPERS
+# ======================================================
+def today():
+    return str(date.today())
+
+def level(score):
+    if score < 40: return "Bronze 🟤"
+    if score < 75: return "Silver ⚪"
+    return "Gold 🟡"
+# ======================================================
+# AUTH
+# ======================================================
+def auth():
+    st.markdown("<div class='main-title fade'>💙 Well-Being for All</div>", unsafe_allow_html=True)
+    st.caption("Student-Led Wellness & Social Enterprise App")
 
     mode = st.radio("Choose", ["Login", "Sign Up"])
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
 
     if mode == "Sign Up":
-        confirm = st.text_input("Confirm Password", type="password")
+        cp = st.text_input("Confirm Password", type="password")
         role = st.selectbox("Role", ["Student", "Teacher"])
 
         if st.button("Create Account"):
-            if username in data["users"]:
+            if u in data["users"]:
                 st.error("User already exists")
-            elif password != confirm:
+            elif p != cp:
                 st.error("Passwords do not match")
             else:
-                data["users"][username] = {
-                    "password": password,
+                data["users"][u] = {
+                    "password": p,
                     "role": role,
                     "moods": [],
                     "journal": [],
                     "habits": {},
-                    "challenges": {},
-                    "suggestions": [],
+                    "tasks": [],
+                    "xp": 0,
+                    "streak": 0,
                     "score": 0
                 }
                 save_data(data)
                 st.success("Account created. Please login.")
-
     else:
         if st.button("Login"):
-            if username in data["users"] and data["users"][username]["password"] == password:
-                st.session_state.user = username
+            if u in data["users"] and data["users"][u]["password"] == p:
+                st.session_state.user = u
                 st.rerun()
             else:
                 st.error("Invalid credentials")
 
-# ---------------- DASHBOARD ----------------
-def dashboard(user):
-    st.header(f"👋 Welcome, {user}")
+# ======================================================
+# DASHBOARD
+# ======================================================
+def dashboard(u):
+    user = data["users"][u]
 
-    col1, col2, col3 = st.columns(3)
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader(f"👋 Welcome, {u}")
+    st.write(f"📅 Today: {date.today()}")
+    st.metric("Wellness Score", user["score"])
+    st.write(f"🏅 Level: {level(user['score'])}")
+    st.write(f"✨ XP: {user['xp']}")
+    st.write(f"🔥 Streak: {user['streak']} days")
+    st.markdown("<span class='badge'>Self-care</span><span class='badge'>Consistency</span>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    col1.metric("Wellness Score", data["users"][user]["score"], "/100")
-    col2.write("📅 Today:", date.today())
-    col3.write("💬 Quote:", random.choice(QUOTES))
+# ======================================================
+# PROFILE
+# ======================================================
+def profile(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("👤 Profile")
+    st.write(f"Role: {data['users'][u]['role']}")
+    st.write(f"Mood entries: {len(data['users'][u]['moods'])}")
+    st.write(f"Journal entries: {len(data['users'][u]['journal'])}")
+    st.write(f"Tasks created: {len(data['users'][u]['tasks'])}")
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# MENTAL HEALTH
+# ======================================================
+def mental_health(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("🧠 Mental Well-Being")
 
-    st.info("Track your health, support others, and grow together.")
-
-# ---------------- MENTAL HEALTH ----------------
-def mental_health(user):
-    st.header("🧠 Mental Well-Being")
-
-    mood = st.radio("How are you feeling today?", ["Happy", "Okay", "Stressed"])
+    mood = st.radio("How do you feel today?", ["Happy 😊","Okay 😐","Stressed 😣"])
     if st.button("Save Mood"):
-        data["users"][user]["moods"].append({
-            "date": str(date.today()),
-            "mood": mood
-        })
+        data["users"][u]["moods"].append({"date":today(),"mood":mood})
+        data["users"][u]["xp"] += 5
         save_data(data)
-        st.success("Mood saved")
+        st.success("Mood saved +5 XP")
 
-    if data["users"][user]["moods"]:
-        df = pd.DataFrame(data["users"][user]["moods"])
-        st.line_chart(df["mood"].value_counts())
+    if data["users"][u]["moods"]:
+        df = pd.DataFrame(data["users"][u]["moods"])
+        st.bar_chart(df["mood"].value_counts())
 
-    st.subheader("📝 Daily Reflection")
-    note = st.text_area("Write privately")
+    note = st.text_area("📝 Private Reflection")
     if st.button("Save Reflection"):
-        data["users"][user]["journal"].append({
-            "date": str(date.today()),
-            "note": note
-        })
-        save_data(data)
-        st.success("Saved")
+        if note.strip():
+            data["users"][u]["journal"].append({"date":today(),"text":note})
+            data["users"][u]["xp"] += 10
+            save_data(data)
+            st.success("Reflection saved +10 XP")
 
-    st.subheader("🌬️ Breathing Exercise")
-    if st.button("Start 20-Second Breathing"):
+    if st.button("🌬️ 20-second breathing"):
         with st.spinner("Breathe slowly…"):
             time.sleep(20)
-        st.success("Nice work!")
+        st.success("Calm session complete")
 
-# ---------------- PHYSICAL HEALTH ----------------
-def physical_health():
-    st.header("💪 Physical Health")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.selectbox("Daily activity goal", ["10 min", "20 min", "30 min"])
-    st.checkbox("Stretching done")
-    st.checkbox("Drank enough water")
-    st.checkbox("Reduced screen time")
+# ======================================================
+# HABITS
+# ======================================================
+def habits(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("📊 Habit Tracker")
 
-# ---------------- HABITS ----------------
-def habit_tracker(user):
-    st.header("📊 Habit Tracker")
+    t = today()
+    if t not in data["users"][u]["habits"]:
+        data["users"][u]["habits"][t] = {}
 
-    today = str(date.today())
-    if today not in data["users"][user]["habits"]:
-        data["users"][user]["habits"][today] = {}
+    habit_list = ["Exercise","Water","Sleep","Gratitude"]
+    done = 0
 
-    habits = ["Exercise", "Water", "Sleep", "Gratitude"]
-    completed = 0
+    for h in habit_list:
+        v = st.checkbox(h, data["users"][u]["habits"][t].get(h, False))
+        data["users"][u]["habits"][t][h] = v
+        if v: done += 1
 
-    for h in habits:
-        val = st.checkbox(h, data["users"][user]["habits"][today].get(h, False))
-        data["users"][user]["habits"][today][h] = val
-        if val:
-            completed += 1
+    score = int((done/len(habit_list))*100)
+    data["users"][u]["score"] = score
+    if score == 100:
+        data["users"][u]["streak"] += 1
+        data["users"][u]["xp"] += 20
 
-    score = int((completed / len(habits)) * 100)
-    data["users"][user]["score"] = score
     save_data(data)
+    st.progress(score/100)
+    st.write(f"Completion: {score}%")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.progress(score / 100)
-    st.write(f"Today's Score: {score}%")
+# ======================================================
+# THINGS TO DO (TASK SYSTEM)
+# ======================================================
+def tasks(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("📝 Things To Do")
 
-# ---------------- CHALLENGES ----------------
-def challenges(user):
-    st.header("🎯 Daily Wellness Challenge")
-
-    today = str(date.today())
-    challenge = random.choice(CHALLENGES)
-
-    done = st.checkbox(f"Challenge: {challenge}")
-    data["users"][user]["challenges"][today] = done
-    save_data(data)
-
-# ---------------- SUGGESTIONS ----------------
-def suggestion_box(user):
-    st.header("📬 Suggestion Box")
-
-    category = st.selectbox("Category", ["Stress", "Academic", "General"])
-    anon = st.checkbox("Submit anonymously")
-    text = st.text_area("Your message")
-
-    if st.button("Submit"):
-        data["users"][user]["suggestions"].append({
-            "category": category,
-            "text": text,
-            "anonymous": anon,
-            "time": str(datetime.now())
-        })
-        save_data(data)
-        st.success("Submitted")
-
-# ---------------- COMMUNITY ----------------
-def community():
-    st.header("🧑‍🤝‍🧑 Gratitude Wall")
-
-    msg = st.text_input("Post something positive")
-    if st.button("Post"):
-        if msg.strip():
-            data["gratitude_wall"].append(msg)
+    new_task = st.text_input("Add a new task")
+    if st.button("Add Task"):
+        if new_task.strip():
+            data["users"][u]["tasks"].append({
+                "task": new_task,
+                "done": False,
+                "date": today()
+            })
             save_data(data)
 
-    for g in data["gratitude_wall"][-10:]:
-        st.write("💛", g)
+    for i, t in enumerate(data["users"][u]["tasks"]):
+        checked = st.checkbox(t["task"], t["done"], key=f"task_{i}")
+        data["users"][u]["tasks"][i]["done"] = checked
 
-# ---------------- BUSINESS ----------------
+    save_data(data)
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# COMMUNITY
+# ======================================================
+def community():
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("💛 Gratitude Wall")
+
+    g = st.text_input("Share something positive")
+    if st.button("Post"):
+        if g.strip():
+            data["gratitude"].append(g)
+            save_data(data)
+
+    for msg in data["gratitude"][-12:]:
+        st.write("•", msg)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ======================================================
+# BUSINESS
+# ======================================================
 def business():
-    st.header("💼 Student Wellness Solutions (SWS)")
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("💼 Student Wellness Solutions (SWS)")
 
     products = {
-        "Digital Planner": 50,
-        "Wellness Kit": 100,
-        "Workshop Pass": 150
+        "Digital Planner":50,
+        "Wellness Kit":100,
+        "Workshop Access":150
     }
 
-    for p, price in products.items():
+    for p,price in products.items():
         if st.button(f"Buy {p} – ₹{price}"):
-            data["total_revenue"] += price
+            data["revenue"] += price
             save_data(data)
             st.success("Purchase successful (demo)")
 
-    st.info(f"Total Wellness Fund Raised: ₹{data['total_revenue']}")
+    st.info(f"Total Wellness Fund: ₹{data['revenue']}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- REPORT ----------------
-def report(user):
-    st.header("📁 Personal Wellness Report")
+# ======================================================
+# ACHIEVEMENTS
+# ======================================================
+def achievements(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("🏆 Achievements")
 
-    st.write("Mood entries:", len(data["users"][user]["moods"]))
-    st.write("Journal entries:", len(data["users"][user]["journal"]))
-    st.write("Current Score:", data["users"][user]["score"])
+    xp = data["users"][u]["xp"]
+    streak = data["users"][u]["streak"]
 
-    if st.button("Export Mood Data (CSV)"):
-        df = pd.DataFrame(data["users"][user]["moods"])
-        df.to_csv("mood_report.csv", index=False)
-        st.success("Exported as mood_report.csv")
+    if xp >= 50: st.success("🎖️ Consistent Starter")
+    if xp >= 150: st.success("🏅 Wellness Builder")
+    if streak >= 3: st.success("🔥 Streak Master")
+    if xp < 50: st.info("Keep going to unlock achievements!")
 
-# ---------------- MAIN ----------------
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# SETTINGS
+# ======================================================
+def settings(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("⚙️ Settings")
+
+    st.write(f"User: {u}")
+    st.write(f"Role: {data['users'][u]['role']}")
+    st.write(f"XP: {data['users'][u]['xp']}")
+
+    if st.button("Reset today's habits"):
+        data["users"][u]["habits"].pop(today(), None)
+        save_data(data)
+        st.warning("Today's habits reset")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ======================================================
+# MAIN
+# ======================================================
 if st.session_state.user is None:
-    auth_page()
+    auth()
 else:
-    user = st.session_state.user
+    u = st.session_state.user
+    menu = st.sidebar.radio("Menu", [
+        "Dashboard",
+        "Profile",
+        "Mental Health",
+        "Habits",
+        "Things To Do",
+        "Achievements",
+        "Community",
+        "Business",
+        "Settings",
+        "Logout"
+        "Daily Challenge",
+        "Reminders",
+        "Reports",
+        "Certificate"
 
-    menu = st.sidebar.radio(
-        "Menu",
-        [
-            "Dashboard",
-            "Mental Health",
-            "Physical Health",
-            "Habit Tracker",
-            "Challenges",
-            "Suggestion Box",
-            "Community",
-            "Business (SWS)",
-            "Report",
-            "Logout"
-        ]
-    )
+    ])
 
-    if menu == "Dashboard":
-        dashboard(user)
-    elif menu == "Mental Health":
-        mental_health(user)
-    elif menu == "Physical Health":
-        physical_health()
-    elif menu == "Habit Tracker":
-        habit_tracker(user)
-    elif menu == "Challenges":
-        challenges(user)
-    elif menu == "Suggestion Box":
-        suggestion_box(user)
-    elif menu == "Community":
-        community()
-    elif menu == "Business (SWS)":
-        business()
-    elif menu == "Report":
-        report(user)
+    if menu == "Dashboard": dashboard(u)
+    elif menu == "Profile": profile(u)
+    elif menu == "Mental Health": mental_health(u)
+    elif menu == "Habits": habits(u)
+    elif menu == "Things To Do": tasks(u)
+    elif menu == "Achievements": achievements(u)
+    elif menu == "Community": community()
+    elif menu == "Business": business()
+    elif menu == "Settings": settings(u)
     elif menu == "Logout":
+    elif menu == "Daily Challenge": daily_challenge(u)
+    elif menu == "Reminders": reminders()
+    elif menu == "Reports": reports(u)
+    elif menu == "Certificate": certificate(u)
+    elif menu == "Teacher Dashboard" and data["users"][u]["role"] == "Teacher":
+    teacher_dashboard()
+
         st.session_state.user = None
         st.rerun()
+# ======================================================
+# DAILY CHALLENGE
+# ======================================================
+CHALLENGES = [
+    "Drink 8 glasses of water",
+    "Take a 10-minute walk",
+    "Write 3 things you’re grateful for",
+    "Stretch for 5 minutes",
+    "Sleep before 11 PM",
+    "Help someone today"
+]
+
+def daily_challenge(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("⚡ Daily Challenge")
+
+    today_key = today()
+    challenge = CHALLENGES[hash(today_key) % len(CHALLENGES)]
+
+    st.write("Today's Challenge:")
+    st.success(challenge)
+
+    if "challenge_done" not in data["users"][u]:
+        data["users"][u]["challenge_done"] = {}
+
+    if data["users"][u]["challenge_done"].get(today_key):
+        st.info("Challenge already completed today")
+    else:
+        if st.button("Mark as Completed"):
+            data["users"][u]["challenge_done"][today_key] = True
+            data["users"][u]["xp"] += 25
+            save_data(data)
+            st.success("Challenge completed! +25 XP")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# REMINDERS
+# ======================================================
+def reminders():
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("⏰ Self-Care Reminders")
+
+    reminder = st.selectbox(
+        "Choose a reminder",
+        ["Drink Water 💧", "Stand & Stretch 🧍", "Take a Deep Breath 🌬️"]
+    )
+
+    if st.button("Trigger Reminder"):
+        st.warning(f"Reminder: {reminder}")
+
+    st.caption("Demo reminder system (works without notifications)")
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# ADVANCED REPORTS
+# ======================================================
+def reports(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("📈 Advanced Wellness Report")
+
+    user = data["users"][u]
+
+    report_data = {
+        "XP": user["xp"],
+        "Score": user["score"],
+        "Streak": user["streak"],
+        "Mood Entries": len(user["moods"]),
+        "Journal Entries": len(user["journal"]),
+        "Tasks": len(user["tasks"])
+    }
+
+    df = pd.DataFrame([report_data])
+    st.dataframe(df)
+
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Report (CSV)",
+        csv,
+        "wellbeing_report.csv",
+        "text/csv"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# TEACHER DASHBOARD
+# ======================================================
+def teacher_dashboard():
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("👩‍🏫 Teacher Dashboard")
+
+    mood_count = {}
+    total_xp = 0
+    users = 0
+
+    for user in data["users"].values():
+        users += 1
+        total_xp += user.get("xp", 0)
+        for m in user.get("moods", []):
+            mood_count[m["mood"]] = mood_count.get(m["mood"], 0) + 1
+
+    if mood_count:
+        st.write("Overall Mood Distribution")
+        st.bar_chart(mood_count)
+
+    st.metric("Total Users", users)
+    st.metric("Total XP Earned", total_xp)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+# ======================================================
+# CERTIFICATE
+# ======================================================
+def certificate(u):
+    st.markdown("<div class='card fade'>", unsafe_allow_html=True)
+    st.subheader("📜 Wellness Certificate")
+
+    st.markdown(f"""
+    **Certificate of Participation**
+
+    This certifies that **{u}** has actively participated in the  
+    **Well-Being for All Student Wellness Program**
+
+    🏅 Level Achieved: **{level(data["users"][u]["score"])}**  
+    ✨ XP Earned: **{data["users"][u]["xp"]}**
+    """)
+
+    if st.button("Generate Certificate"):
+        st.success("Certificate generated successfully (demo)")
+
+    st.markdown("</div>", unsafe_allow_html=True)
